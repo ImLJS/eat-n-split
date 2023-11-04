@@ -24,6 +24,7 @@ let initialFriends = [
 export default function App() {
   const [friends, setFriends] = useState(initialFriends);
   const [showAddFriend, setShowAddFriend] = useState(false);
+  const [selectedFriend, setSelectedFriend] = useState(null);
 
   function handleShowAddFriend() {
     setShowAddFriend((show) => !show);
@@ -34,33 +35,50 @@ export default function App() {
     setShowAddFriend(false);
   }
 
+  function handleSelectedFriend(friend) {
+    setSelectedFriend((cur) => (cur?.id === friend.id ? null : friend));
+  }
+
   return (
     <div className="app">
       <div className="sidebar">
-        <FriendList friends={friends} />
+        <FriendList
+          friends={friends}
+          onSelection={handleSelectedFriend}
+          selectedFriend={selectedFriend}
+        />
         {showAddFriend && <FormAddFriend onAddFriend={handleAddFriend} />}
         <Button onClick={handleShowAddFriend}>
           {showAddFriend ? "Close" : "Add Friend"}
         </Button>
       </div>
-      <FormSplitBill />
+      {selectedFriend && (
+        <FormSplitBill selectedFriend={selectedFriend} friends={friends} />
+      )}
     </div>
   );
 }
 
-function FriendList({ friends }) {
+function FriendList({ friends, onSelection, selectedFriend }) {
   return (
     <ul>
       {friends.map((friend) => (
-        <Friend friend={friend} key={friend.id} />
+        <Friend
+          friend={friend}
+          key={friend.id}
+          onSelection={onSelection}
+          selectedFriend={selectedFriend}
+        />
       ))}
     </ul>
   );
 }
 
-function Friend({ friend }) {
+function Friend({ friend, onSelection, selectedFriend }) {
+  const isSelected = friend.id === selectedFriend?.id;
+
   return (
-    <li>
+    <li className={isSelected ? "selected" : ""}>
       <img src={friend.image} alt={friend.name} />
       <h3>{friend.name}</h3>
       {friend.balance < 0 && (
@@ -74,7 +92,9 @@ function Friend({ friend }) {
           {friend.name} owes you ${friend.balance}
         </p>
       )}
-      <Button>Select</Button>
+      <Button onClick={() => onSelection(friend)}>
+        {isSelected ? "Close" : "Select"}
+      </Button>
     </li>
   );
 }
@@ -131,21 +151,52 @@ function Button({ children, onClick }) {
   );
 }
 
-function FormSplitBill() {
+function FormSplitBill({ selectedFriend, friends }) {
+  const [bill, setBill] = useState("");
+  const [paidByUser, setPaidByUser] = useState("");
+  const paidByFriend = bill ? bill - paidByUser : "";
+  const [whoIsPaying, setWhoIsPaying] = useState("user");
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (!bill || !paidByUser) return;
+    if (whoIsPaying === "user") {
+    }
+  }
+
   return (
-    <form className="form-split-bill">
-      <h2>Split a bill with X</h2>
+    <form className="form-split-bill" onSubmit={handleSubmit}>
+      <h2>Split a bill with {selectedFriend.name}</h2>
       <label>💰 Bill Value</label>
-      <input type="text" />
+      <input
+        type="text"
+        value={bill}
+        onChange={(e) => setBill(Number(Number(e.target.value)))}
+      />
       <label>🤵 Your Expenses</label>
-      <input type="text" />
-      <label>🧑‍🤝‍🧑 X's Expenses</label>
-      <input type="text" disabled />
+      <input
+        type="text"
+        value={paidByUser <= bill ? paidByUser : 0}
+        onChange={(e) =>
+          setPaidByUser(
+            Number(
+              Number(e.target.value) > bill
+                ? paidByUser
+                : Number(e.target.value)
+            )
+          )
+        }
+      />
+      <label>🧑‍🤝‍🧑 {selectedFriend.name}'s Expenses</label>
+      <input type="text" disabled value={paidByFriend} />
 
       <label>💰 Who is Paying the Bill</label>
-      <select>
+      <select
+        value={whoIsPaying}
+        onChange={(e) => setWhoIsPaying(e.target.value)}
+      >
         <option value="user">You</option>
-        <option value="friend">X</option>
+        <option value="friend">{selectedFriend["name"]}</option>
       </select>
       <Button>Split Bill</Button>
     </form>
